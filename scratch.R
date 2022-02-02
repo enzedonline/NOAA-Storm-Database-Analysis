@@ -114,7 +114,11 @@ set_allowed_event_type <- function(observation) {
     )[1]
 }
 
-dfEvents <- dfEvents %>% mutate(Event = apply(dfEvents, 1, set_allowed_event_type))
+dfEvents <- dfEvents %>% 
+  mutate(Event = apply(dfEvents, 1, set_allowed_event_type)) %>%
+  relocate(Event, .after = EVTYPE)
+head(dfEvents, 10)
+
 
 max_length <- max(sapply(event_types, length))
 event_types <- lapply(
@@ -194,6 +198,10 @@ dfEvents <- dfEvents %>%
     )
   )
 
+dfEvents %>%
+  select(BGN_DATE, Event, PROPERTY_DAMAGE, CROP_DAMAGE) %>%
+  slice_head(n=10)
+
 # Check for spurious values:
 dfEvents %>% summarise(
   max(FATALITIES),
@@ -208,6 +216,7 @@ dfEvents %>% summarise(
 refnum <- dfEvents %>% 
   filter(PROPERTY_DAMAGE == max(PROPERTY_DAMAGE))
 refnum <- as.numeric(refnum$REFNUM)
+dfEvents$BGN_DATE[dfEvents$REFNUM == refnum]
 
 # From comments:
 dfEvents$REMARKS[dfEvents$REFNUM == refnum]
@@ -333,9 +342,8 @@ top5_by_year_no_katrina <- dfEvents %>%
   filter(REFNUM %nin% katrina$REFNUM) %>%
   group_by(Year=year(BGN_DATE), Event) %>% 
   summarise(
-    Total = DAMAGE / 1e9
+    Total = sum(DAMAGE) / 1e9
   ) %>% 
-  arrange(desc(Total))  %>% 
   arrange(Year, desc(Total)) %>% 
   slice_max(order_by=Total, n=5) %>%
   slice_head(n=5)
